@@ -59,3 +59,34 @@
     cursor: pointer;
   }
   
+  /* 추가된 스타일 */
+  .search-results {
+    margin-top: 20px;
+  }
+  
+  .place-item {
+    display: flex;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+  }
+  
+  .place-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    margin-right: 10px;
+  }
+  
+  .place-details h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: bold;
+  }
+  
+  .place-details p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #555;
+  }
+  

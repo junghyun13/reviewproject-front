@@ -1,65 +1,50 @@
-import React, { useState } from "react";
-import styled from "styled-components"; // 스타일링 라이브러리
-import logo from "../../commarslogo.png";
-import { useNavigate } from "react-router-dom"; // 페이지 이동에 필요한 useNavigate
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
+import logo from '../../commarslogo.png';
 
-const Header = () => {
-  // 로그인 상태 관리
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [nickname, setNickname] = useState("홍길동"); // 예시 닉네임
+const Header = ({ user, setUser }) => {
   const navigate = useNavigate();
 
-  // 로그아웃 핸들러
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setNickname(""); // 유저 정보 초기화
-    alert("로그아웃 되었습니다.");
-    navigate("/"); // 로그아웃 후 홈으로 이동
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/users/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        alert('로그아웃 되었습니다.');
+        setUser(null); // 사용자 정보 초기화
+        navigate('/login');
+      } else {
+        alert('로그아웃 실패');
+      }
+    } catch (err) {
+      console.error('로그아웃 오류:', err);
+    }
   };
 
   return (
     <HeaderContainer>
       <Navbar>
-        {/* 로고 이미지 */}
-        <Logo>
-          <img src={logo} alt="Commars Logo" />
+        <Logo onClick={() => navigate('/')}>
+          <img src={logo} alt="ComMars Logo" />
         </Logo>
-
-        {/* 네비게이션 링크 */}
         <NavLinks>
-          <li>
-            <a href="/commars">Commars</a>
-          </li>
-          <li>
-            <a href="/today-random">오늘 뭐 먹지?</a>
-          </li>
-          <li>
-            <a href="/home">커뮤니티</a>
-          </li>
-          <li>
-            <a href="#!">인기 리뷰어</a>
-          </li>
-
-          {/* 로그인 여부에 따라 UI 변경 */}
-          {isLoggedIn ? (
+          <li><a href="/commars">Commars</a></li>
+          <li><a href="/today-random">오늘 뭐 먹지?</a></li>
+          <li><a href="/community">커뮤니티</a></li>
+          <li><a href="/top-reviewers">인기 리뷰어</a></li>
+          {user ? (
             <>
-              <li>
-                <Nickname onClick={() => navigate("/mypage")}>
-                  {nickname}
-                </Nickname>
-              </li>
-              <li>
-                <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
-              </li>
+              <li><Nickname onClick={() => navigate('/mypage')}>{user.name}</Nickname></li>
+              <li><LogoutButton onClick={handleLogout}>로그아웃</LogoutButton></li>
             </>
           ) : (
             <>
-              <li>
-                <a href="/login">로그인</a>
-              </li>
-              <li>
-                <a href="/signup">회원가입</a>
-              </li>
+              <li><a href="/login">로그인</a></li>
+              <li><a href="/signup">회원가입</a></li>
             </>
           )}
         </NavLinks>
@@ -68,7 +53,6 @@ const Header = () => {
   );
 };
 
-// 스타일 정의 (styled-components 사용)
 const HeaderContainer = styled.header`
   display: flex;
   justify-content: center;
@@ -86,8 +70,9 @@ const Navbar = styled.nav`
 `;
 
 const Logo = styled.div`
+  cursor: pointer;
   img {
-    height: 40px; /* 로고 크기 제한 */
+    height: 40px;
     width: auto;
   }
 `;
@@ -99,7 +84,7 @@ const NavLinks = styled.ul`
   padding: 0;
 
   li {
-    margin-left: 20px; /* 링크 간격 */
+    margin-left: 20px;
     font-size: 16px;
   }
 
@@ -110,7 +95,7 @@ const NavLinks = styled.ul`
     transition: color 0.2s;
 
     &:hover {
-      color: #007bff; /* 호버 시 색상 변경 */
+      color: #007bff;
     }
   }
 `;
@@ -119,8 +104,9 @@ const Nickname = styled.span`
   cursor: pointer;
   color: #333;
   font-weight: bold;
+
   &:hover {
-    color: #007bff; /* 호버 시 색상 변경 */
+    color: #007bff;
   }
 `;
 
@@ -131,8 +117,9 @@ const LogoutButton = styled.button`
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
+
   &:hover {
-    color: #007bff; /* 호버 시 색상 변경 */
+    color: #007bff;
   }
 `;
 
