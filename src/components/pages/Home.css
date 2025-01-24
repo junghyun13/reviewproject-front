@@ -1,0 +1,7 @@
+.Home {
+    display: grid;
+    grid-template-columns: 19% 62% 19%;
+}
+
+#Home-left { border-right: solid 1px #aabbaa; }
+#Home-right { border-left: solid 1px #aabbaa; }
