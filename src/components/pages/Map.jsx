@@ -4,48 +4,80 @@ import { useEffect, useState } from 'react';
 
 function App() {
   const [isSecondSidebarOpen, setIsSecondSidebarOpen] = useState(false);
+  const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState('');
   const [keyword, setKeyword] = useState('');
   const [places, setPlaces] = useState([]);
-  const [userLocation, setUserLocation] = useState(null);
+  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [userLocation, setUserLocation] = useState({ lat: 37.5665, lng: 126.9780 }); // 서울 시청 위도, 경도
   const [map, setMap] = useState(null);
   const [markers, setMarkers] = useState([]);
+
+  const API_BASE_URL = 'http://localhost:8080/api/restaurants';
 
   const handleSidebarClick = (option) => {
     setSelectedOption(option);
     setIsSecondSidebarOpen(true);
   };
 
-  const searchPlaces = () => {
-    if (!window.kakao || !window.kakao.maps) {
-      alert('Kakao Maps API is not loaded yet.');
-      return;
+  const fetchNearbyRestaurants = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/nearby?lat=${userLocation.lat}&lng=${userLocation.lng}`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Nearby Restaurants:', data);
+      setPlaces(data);
+    } catch (error) {
+      console.error('Error fetching nearby restaurants:', error);
     }
+  };
 
+  const searchByKeyword = async () => {
     if (!keyword.trim()) {
       alert('키워드를 입력해주세요!');
       return;
     }
 
-    const ps = new kakao.maps.services.Places();
-    ps.keywordSearch(keyword, (data, status) => {
-      if (status === kakao.maps.services.Status.OK) {
-        setPlaces(data);
-      } else {
-        alert('검색 결과가 없습니다.');
+    try {
+      const response = await fetch(`${API_BASE_URL}/search?keyword=${keyword}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    });
+      const data = await response.json();
+      setPlaces(data);
+    } catch (error) {
+      console.error('Error searching by keyword:', error);
+    }
+  };
+
+  const fetchPlaceDetails = async (placeName) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/detail?name=${placeName}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setSelectedPlace(data);
+      setIsDetailSidebarOpen(true);
+    } catch (error) {
+      console.error('Error fetching place details:', error);
+    }
   };
 
   useEffect(() => {
     const script = document.createElement('script');
-    script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=c7958a7c0d07a3b72a7fee938b0703d8&libraries=services';
+    script.src =
+      'https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=c7958a7c0d07a3b72a7fee938b0703d8&libraries=services';
     script.async = true;
     script.onload = () => {
       kakao.maps.load(() => {
         const mapContainer = document.getElementById('map');
         const options = {
-          center: new kakao.maps.LatLng(37.566826, 126.9786567),
+          center: new kakao.maps.LatLng(userLocation.lat, userLocation.lng),
           level: 3,
         };
         const newMap = new kakao.maps.Map(mapContainer, options);
@@ -53,20 +85,27 @@ function App() {
       });
     };
     document.head.appendChild(script);
+    fetchNearbyRestaurants();
   }, []);
 
   useEffect(() => {
     if (!map) return;
+
     markers.forEach((marker) => marker.setMap(null));
     setMarkers([]);
 
     if (places.length > 0) {
       const bounds = new kakao.maps.LatLngBounds();
-      const newMarkers = places.map((place, idx) => {
-        const position = new kakao.maps.LatLng(place.y, place.x);
+      const newMarkers = places.map((place) => {
+        const position = new kakao.maps.LatLng(place.latitude, place.longitude);
         const marker = new kakao.maps.Marker({ position });
         marker.setMap(map);
         bounds.extend(position);
+
+        kakao.maps.event.addListener(marker, 'click', () => {
+          fetchPlaceDetails(place.name);
+        });
+
         return marker;
       });
       map.setBounds(bounds);
@@ -78,50 +117,58 @@ function App() {
     <div className="App">
       <div className="sidebar">
         <a href="#" onClick={() => handleSidebarClick('검색')}>검색</a>
-        <a href="#" onClick={() => handleSidebarClick('길찾기')}>길찾기</a>
-        <a href="#" onClick={() => handleSidebarClick('찜')}>찜</a>
-        <a href="#" onClick={() => handleSidebarClick('인기 키워드')}>인기 키워드</a>
+        <a href="#" onClick={() => handleSidebarClick('키워드 검색')}>키워드 검색</a>
       </div>
 
       {isSecondSidebarOpen && selectedOption === '검색' && (
         <div className="second-sidebar">
-          <input
-            type="text"
-            placeholder="검색어를 입력하세요"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-          <button onClick={searchPlaces}>검색</button>
-          <br />
+          <button onClick={fetchNearbyRestaurants}>현재 위치 주변 검색</button>
           <button onClick={() => setIsSecondSidebarOpen(false)}>닫기</button>
-
-          {/* 검색된 식당 목록 표시 */}
-          {places.length > 0 && (
-            <div className="search-results">
-              {places.map((place, index) => (
-                <div key={index} className="place-item">
-                  <img
-                    src={place.place_url ? `https://placeimg.com/200/200/food` : ''}
-                    alt={place.place_name}
-                    className="place-image"
-                  />
-                  <div className="place-details">
-                    <h4>{place.place_name}</h4>
-                    <p>{place.address_name}</p>
-                    <p>{place.category_name}</p>
-                  </div>
-                </div>
+          {places.length > 0 ? (
+            <ul>
+              {places.map((place) => (
+                <li key={place.id} onClick={() => fetchPlaceDetails(place.name)}>
+                  {place.name}
+                </li>
               ))}
-            </div>
+            </ul>
+          ) : (
+            <p>주변에 검색된 식당이 없습니다.</p>
           )}
         </div>
       )}
 
-      {isSecondSidebarOpen && selectedOption !== '검색' && (
+      {isSecondSidebarOpen && selectedOption === '키워드 검색' && (
         <div className="second-sidebar">
-          <h3>{selectedOption}</h3>
-          <p>{`${selectedOption}에 대한 상세 내용이 여기에 표시됩니다.`}</p>
+          <input
+            type="text"
+            placeholder="키워드를 입력하세요"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+          <button onClick={searchByKeyword}>검색</button>
           <button onClick={() => setIsSecondSidebarOpen(false)}>닫기</button>
+          {places.length > 0 ? (
+            <ul>
+              {places.map((place) => (
+                <li key={place.id} onClick={() => fetchPlaceDetails(place.name)}>
+                  {place.name}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>검색 결과가 없습니다.</p>
+          )}
+        </div>
+      )}
+
+      {isDetailSidebarOpen && selectedPlace && (
+        <div className="detail-sidebar">
+          <h3>{selectedPlace.name}</h3>
+          <p>카테고리: {selectedPlace.category}</p>
+          <p>별점: {selectedPlace.rating}</p>
+          <p>리뷰: {selectedPlace.review}</p>
+          <button onClick={() => setIsDetailSidebarOpen(false)}>닫기</button>
         </div>
       )}
 
